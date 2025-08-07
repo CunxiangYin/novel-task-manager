@@ -17,8 +17,10 @@ os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///./test.db'
 os.environ['DATABASE_SYNC_URL'] = 'sqlite:///./test.db'
 
 # Override CORS settings to proper JSON format
-# Get LAN IP for CORS
+import json
 import socket
+
+# Get LAN IP for CORS
 try:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
@@ -37,11 +39,9 @@ cors_origins = [
     f"http://{lan_ip}:5174",
     f"http://{lan_ip}:5175",
     f"http://{lan_ip}:3000",
-    "http://192.168.0.0/16",  # Allow entire local network range
-    "http://10.0.0.0/8",      # Allow entire local network range
-    "http://172.16.0.0/12"    # Allow entire local network range
+    "*"  # Allow all origins for development
 ]
-os.environ['CORS_ORIGINS'] = str(cors_origins)
+os.environ['CORS_ORIGINS'] = json.dumps(cors_origins)
 os.environ['ALLOWED_EXTENSIONS'] = '[".txt",".md"]'
 
 # Create necessary directories
@@ -67,16 +67,34 @@ if __name__ == "__main__":
     from app.main import app
     
     # Get local network IP
-    try:
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
-        # Try to get actual LAN IP (not loopback)
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        lan_ip = s.getsockname()[0]
-        s.close()
-    except:
-        lan_ip = "Unable to detect"
+    def get_lan_ip():
+        try:
+            # Get all network interfaces
+            import subprocess
+            result = subprocess.run(['ifconfig'], capture_output=True, text=True)
+            lines = result.stdout.split('\n')
+            
+            # Look for 192.168.x.x or 10.x.x.x addresses
+            for line in lines:
+                if 'inet ' in line and '127.0.0.1' not in line:
+                    parts = line.split()
+                    for i, part in enumerate(parts):
+                        if part == 'inet' and i + 1 < len(parts):
+                            ip = parts[i + 1]
+                            # Prefer common LAN IP ranges
+                            if ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'):
+                                return ip
+            
+            # Fallback to socket method
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "localhost"
+    
+    lan_ip = get_lan_ip()
     
     print("\n" + "="*50)
     print("Starting Novel Task Manager API (Local Mode)")
