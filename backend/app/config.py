@@ -28,7 +28,12 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost",
+        "http://192.168.*.*:*",  # Allow local network
+        "http://10.*.*.*:*",     # Allow local network
+        "http://172.16.*.*:*",   # Allow local network
+        "*"  # Allow all origins for development (remove in production!)
     ]
     
     # File Storage
