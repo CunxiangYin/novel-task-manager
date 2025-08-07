@@ -7,7 +7,7 @@ from app.models import Task, TaskLog
 from app.models.task import TaskStatus, LogLevel
 from app.api.websocket import notify_task_update
 from app.config import settings
-from app.database import async_session_maker
+from app.database import AsyncSessionLocal
 
 
 class TaskMonitor:
@@ -34,7 +34,7 @@ class TaskMonitor:
     
     async def check_timeouts(self):
         """Check for tasks that have exceeded timeout"""
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             try:
                 # Calculate timeout threshold
                 timeout_threshold = datetime.utcnow() - timedelta(seconds=settings.TASK_TIMEOUT_SECONDS)
