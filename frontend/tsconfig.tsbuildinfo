@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/fileupload.tsx","./src/components/taskitem.tsx","./src/components/tasklist.tsx","./src/components/taskstats.tsx","./src/config/index.ts","./src/hooks/usewebsocket.ts","./src/services/api.ts","./src/store/noveltaskstore.ts","./src/types/noveltask.ts"],"version":"5.9.2"}
