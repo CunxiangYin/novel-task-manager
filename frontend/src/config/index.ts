@@ -4,4 +4,5 @@ export const config = {
   USE_MOCK_API: import.meta.env.VITE_USE_MOCK_API === 'true' || false,
   MAX_FILE_SIZE: parseInt(import.meta.env.VITE_MAX_FILE_SIZE || '10485760'),
   ALLOWED_EXTENSIONS: (import.meta.env.VITE_ALLOWED_EXTENSIONS || '.txt,.md').split(','),
+  MAX_CONCURRENT_TASKS: parseInt(import.meta.env.VITE_MAX_CONCURRENT_TASKS || '3'),
 };
