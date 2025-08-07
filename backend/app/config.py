@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     
     # Task Processing
     MAX_CONCURRENT_TASKS: int = 3
-    TASK_TIMEOUT_SECONDS: int = 300
+    TASK_TIMEOUT_SECONDS: int = 1800  # 30 minutes
     
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"

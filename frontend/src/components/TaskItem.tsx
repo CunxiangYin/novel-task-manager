@@ -192,7 +192,18 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, index }) => {
       {/* Error Message */}
       {task.status === 'failed' && task.error && (
         <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded-md">
-          <p className="text-xs text-red-700">{task.error}</p>
+          <p className="text-xs text-red-700">
+            {task.error.includes('timeout') || task.error.includes('exceeded') ? (
+              <>
+                ⏱️ {task.error}
+                <span className="block mt-1 text-red-600">
+                  任务处理时间超过了允许的最大时长（30分钟）
+                </span>
+              </>
+            ) : (
+              task.error
+            )}
+          </p>
         </div>
       )}
 
@@ -200,7 +211,38 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, index }) => {
       {task.status === 'processing' && (
         <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
           <span>开始时间: {task.startedAt ? formatTime(task.startedAt) : '-'}</span>
-          <span>预计剩余: {Math.ceil((100 - task.progress) / 10)} 秒</span>
+          <span>
+            {(() => {
+              // Calculate elapsed time and estimate remaining
+              if (task.startedAt && task.progress > 0) {
+                const elapsedMs = new Date().getTime() - new Date(task.startedAt).getTime();
+                const elapsedMinutes = Math.floor(elapsedMs / 60000);
+                const estimatedTotalMinutes = (elapsedMinutes / task.progress) * 100;
+                const remainingMinutes = Math.ceil(estimatedTotalMinutes - elapsedMinutes);
+                
+                if (remainingMinutes > 60) {
+                  const hours = Math.floor(remainingMinutes / 60);
+                  const mins = remainingMinutes % 60;
+                  return `预计剩余: ${hours}小时${mins}分钟`;
+                } else if (remainingMinutes > 0) {
+                  return `预计剩余: ${remainingMinutes}分钟`;
+                } else {
+                  return '即将完成...';
+                }
+              }
+              return '计算中...';
+            })()}
+          </span>
+          <span className="text-orange-600">
+            {task.startedAt && (() => {
+              const elapsedMs = new Date().getTime() - new Date(task.startedAt).getTime();
+              const elapsedMinutes = Math.floor(elapsedMs / 60000);
+              if (elapsedMinutes > 25) {
+                return '⚠️ 接近超时限制(30分钟)';
+              }
+              return '';
+            })()}
+          </span>
         </div>
       )}
     </div>
