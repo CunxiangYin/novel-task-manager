@@ -1,14 +1,19 @@
 import { FileUpload } from './components/FileUpload';
 import { TaskList } from './components/TaskList';
 import { TaskStats } from './components/TaskStats';
+import { ToastContainer } from './components/Toast';
+import { ConnectionStatus } from './components/ConnectionStatus';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useEffect } from 'react';
 import { useTaskStore } from './store/novelTaskStore';
+import { useToastStore } from './store/toastStore';
 import { config } from './config';
 
 function App() {
   const { subscribeToTask } = useWebSocket();
   const tasks = useTaskStore((state) => state.tasks);
+  const toasts = useToastStore((state) => state.toasts);
+  const removeToast = useToastStore((state) => state.removeToast);
 
   // Subscribe to all active tasks
   useEffect(() => {
@@ -47,6 +52,12 @@ function App() {
           </section>
         </div>
       </main>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      
+      {/* Connection Status */}
+      <ConnectionStatus />
     </div>
   );
 }
