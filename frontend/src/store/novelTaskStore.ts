@@ -3,7 +3,7 @@ import { NovelTask } from '../types/novelTask';
 
 interface TaskStore {
   tasks: NovelTask[];
-  addTask: (file: File) => string;
+  addTask: (file: File, taskFromBackend?: NovelTask) => string;
   updateTaskProgress: (id: string, progress: number) => void;
   updateTaskStatus: (id: string, status: NovelTask['status'], resultUrl?: string, error?: string) => void;
   removeTask: (id: string) => void;
@@ -17,10 +17,10 @@ const MAX_CONCURRENT_TASKS = 3;
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   
-  addTask: (file: File) => {
-    const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newTask: NovelTask = {
-      id: taskId,
+  addTask: (file: File, taskFromBackend?: NovelTask) => {
+    // 如果有后端返回的任务信息，使用它；否则创建本地任务
+    const newTask: NovelTask = taskFromBackend || {
+      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       fileName: file.name,
       fileSize: file.size,
       status: 'pending',
@@ -32,10 +32,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       tasks: [newTask, ...state.tasks],
     }));
     
-    // Check if we can start processing immediately
-    get().processNextTask();
+    // 如果任务来自后端且状态是 pending，不需要模拟处理
+    // 后端会通过 WebSocket 发送真实的进度更新
+    if (!taskFromBackend) {
+      // 只有本地模拟任务才需要调用 processNextTask
+      get().processNextTask();
+    }
     
-    return taskId;
+    return newTask.id;
   },
   
   processNextTask: () => {

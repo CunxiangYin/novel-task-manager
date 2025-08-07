@@ -17,7 +17,7 @@ os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///./test.db'
 os.environ['DATABASE_SYNC_URL'] = 'sqlite:///./test.db'
 
 # Override CORS settings to proper JSON format
-os.environ['CORS_ORIGINS'] = '["http://localhost:5173","http://localhost:5174","http://localhost:3000"]'
+os.environ['CORS_ORIGINS'] = '["http://localhost:5173","http://localhost:5174","http://localhost:5175","http://localhost:3000"]'
 os.environ['ALLOWED_EXTENSIONS'] = '[".txt",".md"]'
 
 # Create necessary directories
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
+        host="localhost",
         port=8000,
         reload=True,
         reload_dirs=["app"]

@@ -1,11 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { Upload, File, X, FolderOpen, FileText } from 'lucide-react';
 import { useTaskStore } from '../store/novelTaskStore';
+import { apiService } from '../services/api';
+import { showSuccess, showInfo } from '../store/toastStore';
 
 export const FileUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const addTask = useTaskStore((state) => state.addTask);
   const tasks = useTaskStore((state) => state.tasks);
 
@@ -49,25 +52,59 @@ export const FileUpload: React.FC = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpload = () => {
-    selectedFiles.forEach(file => {
-      addTask(file);
-    });
+  const handleUpload = async () => {
+    if (isUploading) return;
+    
+    setIsUploading(true);
+    const uploadingFiles = [...selectedFiles];
     setSelectedFiles([]);
+    
+    // 上传每个文件到后端
+    for (const file of uploadingFiles) {
+      try {
+        // 调用后端上传接口
+        const task = await apiService.uploadFile(file);
+        
+        // 添加任务到 store（使用后端返回的任务信息）
+        addTask(file, task);
+        
+        showSuccess(`文件 ${file.name} 上传成功`);
+      } catch (error) {
+        console.error('Upload failed:', error);
+        // 错误已经在 apiService 中处理并显示了
+      }
+    }
+    
+    setIsUploading(false);
   };
 
-  const handleBatchUpload = () => {
+  const handleBatchUpload = async () => {
+    if (isUploading) return;
+    
+    setIsUploading(true);
+    showInfo('开始批量上传测试文件...');
+    
     // Simulate batch upload of 10 files for testing
     for (let i = 1; i <= 10; i++) {
-      const content = `Sample content for novel ${i}`;
+      const content = `这是测试小说 ${i} 的内容\n\n第一章\n\n这是一个测试文件，用于演示批量上传功能。`;
       const blob = new Blob([content], { type: 'text/plain' });
-      // Create a File-like object for compatibility
-      const mockFile = Object.assign(blob, {
-        name: `novel_${i}.txt`,
-        lastModified: Date.now(),
-      }) as File;
-      addTask(mockFile);
+      const mockFile = new globalThis.File(
+        [blob],
+        `测试小说_${i}.txt`,
+        { type: 'text/plain', lastModified: Date.now() }
+      );
+      
+      try {
+        // 上传到后端
+        const task = await apiService.uploadFile(mockFile);
+        addTask(mockFile, task);
+      } catch (error) {
+        console.error(`Failed to upload test file ${i}:`, error);
+      }
     }
+    
+    showSuccess('批量上传完成！');
+    setIsUploading(false);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -99,7 +136,7 @@ export const FileUpload: React.FC = () => {
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
@@ -108,11 +145,12 @@ export const FileUpload: React.FC = () => {
           accept=".txt,.md,text/plain"
           className="hidden"
           onChange={handleChange}
+          disabled={isUploading}
         />
         
         <Upload className={`mx-auto h-10 w-10 ${dragActive ? 'text-blue-500' : 'text-gray-400'} mb-3`} />
         <p className="text-sm font-medium text-gray-700">
-          {dragActive ? '释放以上传文件' : '拖拽文件或点击选择'}
+          {isUploading ? '正在上传...' : dragActive ? '释放以上传文件' : '拖拽文件或点击选择'}
         </p>
         <p className="text-xs text-gray-500 mt-1">
           支持多文件批量上传
@@ -123,7 +161,8 @@ export const FileUpload: React.FC = () => {
       <div className="mt-4 space-y-2">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 flex items-center justify-center gap-2"
+          disabled={isUploading}
+          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FolderOpen className="w-4 h-4" />
           选择文件
@@ -131,7 +170,8 @@ export const FileUpload: React.FC = () => {
         
         <button
           onClick={handleBatchUpload}
-          className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 text-sm text-gray-600 flex items-center justify-center gap-2"
+          disabled={isUploading}
+          className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 text-sm text-gray-600 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FileText className="w-4 h-4" />
           模拟批量上传 (10个文件)
@@ -148,6 +188,7 @@ export const FileUpload: React.FC = () => {
             <button
               onClick={() => setSelectedFiles([])}
               className="text-xs text-red-600 hover:text-red-700"
+              disabled={isUploading}
             >
               清空全部
             </button>
@@ -173,7 +214,8 @@ export const FileUpload: React.FC = () => {
                     e.stopPropagation();
                     removeFile(index);
                   }}
-                  className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
+                  disabled={isUploading}
+                  className="p-1 hover:bg-gray-100 rounded flex-shrink-0 disabled:opacity-50"
                 >
                   <X className="w-3 h-3 text-gray-500" />
                 </button>
@@ -184,9 +226,9 @@ export const FileUpload: React.FC = () => {
           <button
             onClick={handleUpload}
             className="w-full mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
-            disabled={selectedFiles.length === 0}
+            disabled={selectedFiles.length === 0 || isUploading}
           >
-            开始处理
+            {isUploading ? '正在上传...' : '开始处理'}
           </button>
         </div>
       )}
