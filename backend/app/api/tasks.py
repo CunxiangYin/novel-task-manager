@@ -166,12 +166,9 @@ async def get_statistics(db: AsyncSession = Depends(get_db)):
     stats = result.first()
     
     # Calculate average processing time for completed tasks
-    avg_time_result = await db.execute(
-        select(
-            func.avg(
-                func.extract('epoch', Task.completed_at - Task.started_at) * 1000
-            )
-        ).where(
+    # Get all completed tasks with valid timestamps
+    completed_tasks_result = await db.execute(
+        select(Task.started_at, Task.completed_at).where(
             and_(
                 Task.status == TaskStatus.COMPLETED,
                 Task.started_at.isnot(None),
@@ -179,12 +176,26 @@ async def get_statistics(db: AsyncSession = Depends(get_db)):
             )
         )
     )
-    avg_processing_time = avg_time_result.scalar()
+    completed_tasks = completed_tasks_result.all()
+    
+    # Calculate average processing time in Python (works with both SQLite and PostgreSQL)
+    avg_processing_time = None
+    if completed_tasks:
+        processing_times = []
+        for started_at, completed_at in completed_tasks:
+            # Calculate time difference in milliseconds
+            time_diff = (completed_at - started_at).total_seconds() * 1000
+            # Only include positive values (sanity check)
+            if time_diff > 0:
+                processing_times.append(time_diff)
+        
+        if processing_times:
+            avg_processing_time = round(sum(processing_times) / len(processing_times), 2)
     
     # Calculate success rate
     success_rate = None
     if stats.total > 0:
-        success_rate = (stats.completed / stats.total) * 100
+        success_rate = round((stats.completed / stats.total) * 100, 2)
     
     return TaskStatistics(
         total=stats.total or 0,
